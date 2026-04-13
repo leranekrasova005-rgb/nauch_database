@@ -9,7 +9,7 @@ interface Publication {
   year: number
   department: string
   result: string
-  status: string
+  status: 'pending' | 'approved' | 'rejected'
   status_display: string
   created_at: string
   circulation: string
@@ -25,6 +25,7 @@ interface Publication {
   pages_count: number
   entry_month: number
   event_date: string | null
+  rejection_reason?: string
 }
 
 const DEPARTMENTS = [
@@ -108,6 +109,7 @@ const MethodistCabinet: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState<PublicationForm>(defaultValues)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
 
   useEffect(() => {
     loadPublications()
@@ -142,11 +144,14 @@ const MethodistCabinet: React.FC = () => {
       const submitData = {
         ...formData,
         event_date: formData.event_date || null,
+        status: 'pending', // Отправляем на модерацию
       }
       
       if (editingId) {
+        // При редактировании запись снова уходит на модерацию
         await api.patch(`/publications/${editingId}/`, submitData)
       } else {
+        // Новая запись создаётся со статусом pending
         await api.post('/publications/', submitData)
       }
       
@@ -155,8 +160,9 @@ const MethodistCabinet: React.FC = () => {
       setEditingId(null)
       setFormData(defaultValues)
       setErrors({})
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving publication:', error)
+      alert(error.response?.data?.message || 'Ошибка при сохранении записи')
     } finally {
       setSaving(false)
     }
@@ -212,6 +218,17 @@ const MethodistCabinet: React.FC = () => {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
   }
+
+  const filteredPublications = publications.filter(pub => 
+    statusFilter === 'all' ? true : pub.status === statusFilter
+  )
+
+  const getStatusCounts = () => ({
+    all: publications.length,
+    pending: publications.filter(p => p.status === 'pending').length,
+    approved: publications.filter(p => p.status === 'approved').length,
+    rejected: publications.filter(p => p.status === 'rejected').length,
+  })
 
   return (
     <div className="cabinet">
@@ -407,23 +424,61 @@ const MethodistCabinet: React.FC = () => {
       )}
 
       <div className="publications-list">
-        <h2>Мои записи ({publications.length})</h2>
+        <h2>Мои записи ({filteredPublications.length})</h2>
+        
+        {/* Вкладки фильтрации по статусу */}
+        <div className="status-tabs">
+          <button 
+            className={`status-tab ${statusFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            Все ({getStatusCounts().all})
+          </button>
+          <button 
+            className={`status-tab pending ${statusFilter === 'pending' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('pending')}
+          >
+            На модерации ({getStatusCounts().pending})
+          </button>
+          <button 
+            className={`status-tab approved ${statusFilter === 'approved' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('approved')}
+          >
+            Одобрено ({getStatusCounts().approved})
+          </button>
+          <button 
+            className={`status-tab rejected ${statusFilter === 'rejected' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('rejected')}
+          >
+            Отклонено ({getStatusCounts().rejected})
+          </button>
+        </div>
         
         {loading ? (
           <div className="loading">Загрузка...</div>
         ) : (
           <div className="cards-grid">
-            {publications.map(pub => (
+            {filteredPublications.map(pub => (
               <div key={pub.id} className={`pub-card ${pub.status}`}>
                 <div className="pub-header">
                   <span className={`status-badge ${pub.status}`}>{pub.status_display}</span>
                   <div className="pub-actions">
-                    <button onClick={() => handleEdit(pub)} title="Редактировать">
-                      <Edit size={16} />
-                    </button>
-                    <button onClick={() => handleDelete(pub.id)} title="Удалить" className="delete">
-                      <Trash2 size={16} />
-                    </button>
+                    {/* Кнопки редактирования и удаления доступны только для pending и rejected записей */}
+                    {(pub.status === 'pending' || pub.status === 'rejected') && (
+                      <>
+                        <button onClick={() => handleEdit(pub)} title="Редактировать">
+                          <Edit size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(pub.id)} title="Удалить" className="delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
+                    {pub.status === 'rejected' && pub.rejection_reason && (
+                      <span className="rejection-reason" title={pub.rejection_reason}>
+                        ⚠️ Отклонено
+                      </span>
+                    )}
                   </div>
                 </div>
                 <h3>{pub.title}</h3>
@@ -434,6 +489,13 @@ const MethodistCabinet: React.FC = () => {
                   {pub.result && <span className="result">{pub.result}</span>}
                 </div>
                 <p className="date">Создано: {new Date(pub.created_at).toLocaleDateString()}</p>
+                
+                {/* Отображение причины отклонения */}
+                {pub.status === 'rejected' && pub.rejection_reason && (
+                  <div className="rejection-info">
+                    <strong>Причина отклонения:</strong> {pub.rejection_reason}
+                  </div>
+                )}
               </div>
             ))}
             {publications.length === 0 && (
