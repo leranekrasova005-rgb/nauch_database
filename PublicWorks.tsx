@@ -91,6 +91,22 @@ const PublicWorks: React.FC = () => {
       </div>
 
       <div className="filters">
+        {/* Фильтр по статусу */}
+        <div className="status-filter-group">
+          <button 
+            className={`status-filter-btn ${statusFilter === 'approved' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('approved')}
+          >
+            ✓ Одобрено
+          </button>
+          <button 
+            className={`status-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            ⊕ Все записи
+          </button>
+        </div>
+
         <div className="search-box">
           <Search size={20} />
           <input
