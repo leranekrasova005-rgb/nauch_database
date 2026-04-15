@@ -140,3 +140,35 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Фильтр по статусу */
+.status-filter-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  width: 100%;
+}
+
+.status-filter-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #dcfce7;
+  background: white;
+  color: #166534;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.status-filter-btn:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.status-filter-btn.active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border-color: #22c55e;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}

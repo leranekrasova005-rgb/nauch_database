@@ -305,3 +305,100 @@
   padding: 2rem;
   color: #666;
 }
+
+/* Status badges for moderation */
+.status-badge.pending {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+}
+
+.status-badge.approved {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.status-badge.rejected {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+}
+
+.pub-card.pending {
+  border-left: 4px solid #fbbf24;
+}
+
+.pub-card.approved {
+  border-left: 4px solid #22c55e;
+}
+
+.pub-card.rejected {
+  border-left: 4px solid #dc2626;
+}
+
+.rejection-reason {
+  font-size: 0.75rem;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+}
+
+.rejection-info {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #fee2e2;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 0.85rem;
+  border: 1px solid #fecaca;
+}
+
+/* Вкладки фильтрации по статусу */
+.status-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.status-tab {
+  padding: 0.5rem 1rem;
+  border: 2px solid #dcfce7;
+  background: white;
+  color: #166534;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.status-tab:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.status-tab.active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border-color: #22c55e;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.status-tab.pending.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.status-tab.approved.active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #22c55e;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.status-tab.rejected.active {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}

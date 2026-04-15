@@ -26,13 +26,31 @@ interface DeleteRequest {
   created_at: string
 }
 
+interface PublicationForModeration {
+  id: number
+  title: string
+  author: string
+  year: number
+  department: string
+  result: string
+  status: 'pending' | 'approved' | 'rejected'
+  status_display: string
+  owner_username: string
+  created_at: string
+  rejection_reason?: string
+}
+
 const AdminPanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'logs'>('users')
-  const [users, setUsers] = useState<User[]>([])
-  const [deleteRequests, setDeleteRequests] = useState<DeleteRequest[]>([])
-  const [logs, setLogs] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'logs' | 'moderation'>('moderation')
+  const [moderationFilter, setModerationFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+  const [users, setUsers] = useState<User[]>([]);
+  const [deleteRequests, setDeleteRequests] = useState<DeleteRequest[]>([]);
+  const [moderationPublications, setModerationPublications] = useState<PublicationForModeration[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData()
@@ -50,6 +68,9 @@ const AdminPanel: React.FC = () => {
       } else if (activeTab === 'logs') {
         const response = await api.get('/logs/')
         setLogs(response.data.results || response.data)
+      } else if (activeTab === 'moderation') {
+        const response = await api.get('/publications/moderation/')
+        setModerationPublications(response.data.results || response.data)
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -94,7 +115,51 @@ const AdminPanel: React.FC = () => {
     }
   }
 
+  const approvePublication = async (id: number) => {
+    setUpdating(id)
+    try {
+      await api.patch(`/publications/${id}/moderate/`, { status: 'approved' })
+      await loadData()
+    } catch (error) {
+      console.error('Error approving publication:', error)
+    } finally {
+      setUpdating(null)
+    }
+  }
+
+  const rejectPublication = async (id: number) => {
+    if (!rejectionReason.trim()) {
+      alert('Укажите причину отклонения')
+      return
+    }
+    setUpdating(id)
+    try {
+      await api.patch(`/publications/${id}/moderate/`, { 
+        status: 'rejected', 
+        rejection_reason: rejectionReason 
+      })
+      setRejectionReason('')
+      setRejectingId(null)
+      await loadData()
+    } catch (error) {
+      console.error('Error rejecting publication:', error)
+    } finally {
+      setUpdating(null)
+    }
+  }
+
   const pendingCount = deleteRequests.filter(r => r.status === 'pending').length
+
+  const filteredModerationPublications = moderationPublications.filter(pub => 
+    moderationFilter === 'all' ? true : pub.status === moderationFilter
+  )
+
+  const getModerationCounts = () => ({
+    all: moderationPublications.length,
+    pending: moderationPublications.filter(p => p.status === 'pending').length,
+    approved: moderationPublications.filter(p => p.status === 'approved').length,
+    rejected: moderationPublications.filter(p => p.status === 'rejected').length,
+  })
 
   return (
     <div className="admin-panel">
@@ -115,6 +180,16 @@ const AdminPanel: React.FC = () => {
           <FileText size={18} />
           Запросы на удаление
           {pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+        </button>
+        <button 
+          className={`tab ${activeTab === 'moderation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('moderation')}
+        >
+          <Check size={18} />
+          Модерация записей
+          {moderationPublications.filter(p => p.status === 'pending').length > 0 && (
+            <span className="badge">{moderationPublications.filter(p => p.status === 'pending').length}</span>
+          )}
         </button>
         <button 
           className={`tab ${activeTab === 'logs' ? 'active' : ''}`}
@@ -225,6 +300,117 @@ const AdminPanel: React.FC = () => {
               ))}
               {deleteRequests.length === 0 && (
                 <p className="empty">Нет запросов на удаление</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'moderation' && (
+        <div className="tab-content">
+          <h2>Модерация записей методистов</h2>
+          
+          {/* Вкладки фильтрации по статусу */}
+          <div className="status-tabs">
+            <button 
+              className={`status-tab ${moderationFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setModerationFilter('all')}
+            >
+              Все ({getModerationCounts().all})
+            </button>
+            <button 
+              className={`status-tab pending ${moderationFilter === 'pending' ? 'active' : ''}`}
+              onClick={() => setModerationFilter('pending')}
+            >
+              На модерации ({getModerationCounts().pending})
+            </button>
+            <button 
+              className={`status-tab approved ${moderationFilter === 'approved' ? 'active' : ''}`}
+              onClick={() => setModerationFilter('approved')}
+            >
+              Одобрено ({getModerationCounts().approved})
+            </button>
+            <button 
+              className={`status-tab rejected ${moderationFilter === 'rejected' ? 'active' : ''}`}
+              onClick={() => setModerationFilter('rejected')}
+            >
+              Отклонено ({getModerationCounts().rejected})
+            </button>
+          </div>
+          
+          {loading ? (
+            <div className="loading">Загрузка...</div>
+          ) : (
+            <div className="moderation-list">
+              {filteredModerationPublications.map(pub => (
+                <div key={pub.id} className={`moderation-card ${pub.status}`}>
+                  <div className="moderation-header">
+                    <span className={`status-badge ${pub.status}`}>{pub.status_display}</span>
+                    <span className="date">{new Date(pub.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <h3>{pub.title}</h3>
+                  <p className="author">Автор: {pub.author}</p>
+                  <div className="moderation-meta">
+                    <span>Год: {pub.year}</span>
+                    <span>Кафедра: {pub.department}</span>
+                    <span>Методист: {pub.owner_username}</span>
+                  </div>
+                  
+                  {pub.status === 'pending' && (
+                    <div className="moderation-actions">
+                      <button 
+                        className="btn-approve"
+                        onClick={() => approvePublication(pub.id)}
+                        disabled={updating === pub.id}
+                      >
+                        <Check size={16} />
+                        Одобрить
+                      </button>
+                      {rejectingId === pub.id ? (
+                        <div className="reject-form">
+                          <input
+                            type="text"
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            placeholder="Причина отклонения"
+                            autoFocus
+                          />
+                          <button 
+                            className="btn-confirm"
+                            onClick={() => rejectPublication(pub.id)}
+                            disabled={updating === pub.id}
+                          >
+                            Подтвердить
+                          </button>
+                          <button 
+                            className="btn-cancel"
+                            onClick={() => { setRejectingId(null); setRejectionReason(''); }}
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          className="btn-reject"
+                          onClick={() => setRejectingId(pub.id)}
+                          disabled={updating === pub.id}
+                        >
+                          <X size={16} />
+                          Отклонить
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  
+                  {pub.status === 'rejected' && pub.rejection_reason && (
+                    <div className="rejection-info">
+                      <strong>Причина отклонения:</strong> {pub.rejection_reason}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {moderationPublications.length === 0 && (
+                <p className="empty">Нет записей на модерации</p>
               )}
             </div>
           )}

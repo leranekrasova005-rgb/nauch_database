@@ -56,10 +56,11 @@ const PublicWorks: React.FC = () => {
   const [result, setResult] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'approved'>('approved')
 
   useEffect(() => {
     loadPublications()
-  }, [search, department, year, result, page])
+  }, [search, department, year, result, page, statusFilter])
 
   const loadPublications = async () => {
     try {
@@ -69,6 +70,7 @@ const PublicWorks: React.FC = () => {
       if (department) params.append('department', department)
       if (year) params.append('year', year)
       if (result) params.append('result', result)
+      if (statusFilter === 'approved') params.append('status', 'approved')
       
       const response = await api.get(`/publications/?${params}`)
       const data = response.data
@@ -89,6 +91,22 @@ const PublicWorks: React.FC = () => {
       </div>
 
       <div className="filters">
+        {/* Фильтр по статусу */}
+        <div className="status-filter-group">
+          <button 
+            className={`status-filter-btn ${statusFilter === 'approved' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('approved')}
+          >
+            ✓ Одобрено
+          </button>
+          <button 
+            className={`status-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            ⊕ Все записи
+          </button>
+        </div>
+
         <div className="search-box">
           <Search size={20} />
           <input
