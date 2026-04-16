@@ -1,69 +1,75 @@
-```gitignore
-# Compiled and build artifacts
-*.js
-*.jsx
-*.ts
-*.tsx
-*.css
-*.scss
-*.sass
-*.less
-*.map
-
-# Dependencies
-node_modules/
-
-# Build outputs
-dist/
-build/
-out/
-bundle/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-*.swo
-
-# Environment
+```
+# Environment variables
 .env
 .env.local
-.env.*
+*.env.*
 
-# Editors
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
-
-# Python specific
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-*.so
+env/
+venv/
+.venv/
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+*.pot
+*.po
+*~
 .pytest_cache/
 .mypy_cache/
 
-# Node specific
+# Django
+*.mo
+*.pot
+.DS_Store
+*.sqlite3
+media/
+staticfiles/
+local_settings.py
+db.sqlite3
+
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+dist/
+build/
+.nuxt/
+.next/
+out/
+coverage/
+*.min.js
+*.min.css
 
-# Temporary files
+# TypeScript
+tsconfig.tsbuildinfo
+dist/
+build/
+
+# Docker
+.dockerenv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 *.tmp
-*.temp
-*~
+
+# OS
 .DS_Store
 Thumbs.db
 ```

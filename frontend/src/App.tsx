@@ -9,19 +9,19 @@ import Statistics from './pages/Statistics/Statistics'
 
 function PrivateRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user, isLoading } = useAuth()
-  
+
   if (isLoading) {
     return <div className="loading">Загрузка...</div>
   }
-  
+
   if (!user) {
     return <Navigate to="/login" />
   }
-  
+
   if (adminOnly && user.role !== 'ADMIN') {
     return <Navigate to="/cabinet" />
   }
-  
+
   return <>{children}</>
 }
 
@@ -31,29 +31,29 @@ function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<PublicWorks />} />
         <Route path="login" element={<Login />} />
-        <Route 
-          path="cabinet" 
+        <Route
+          path="cabinet"
           element={
             <PrivateRoute>
               <MethodistCabinet />
             </PrivateRoute>
-          } 
+          }
         />
-        <Route 
-          path="admin" 
+        <Route
+          path="admin"
           element={
             <PrivateRoute adminOnly>
               <AdminPanel />
             </PrivateRoute>
-          } 
+          }
         />
-        <Route 
-          path="statistics" 
+        <Route
+          path="statistics"
           element={
             <PrivateRoute>
               <Statistics />
             </PrivateRoute>
-          } 
+          }
         />
       </Route>
     </Routes>

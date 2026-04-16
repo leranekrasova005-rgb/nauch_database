@@ -1,21 +1,17 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import api from '../services/api'
+import api from '../api'
 
 interface User {
   id: number
   username: string
-  email: string
-  first_name: string
-  last_name: string
   role: 'ADMIN' | 'METHODIST'
-  department?: string
 }
 
 interface AuthContextType {
   user: User | null
-  isLoading: boolean
   login: (username: string, password: string) => Promise<void>
-  logout: () => Promise<void>
+  logout: () => void
+  isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -41,28 +37,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     const res = await api.post('/auth/login/', { username, password })
-    const { user, tokens } = res.data
-    localStorage.setItem('access_token', tokens.access)
-    localStorage.setItem('refresh_token', tokens.refresh)
+    const { access, refresh, user } = res.data
+    localStorage.setItem('access_token', access)
+    localStorage.setItem('refresh_token', refresh)
     setUser(user)
   }
 
-  const logout = async () => {
-    const refresh = localStorage.getItem('refresh_token')
-    if (refresh) {
-      try {
-        await api.post('/auth/logout/', { refresh })
-      } catch (e) {
-        // Ignore errors
-      }
-    }
+  const logout = () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   )
