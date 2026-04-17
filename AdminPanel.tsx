@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { Check, X, Users, FileText, Activity } from 'lucide-react'
+import { useToast } from '../../Toast'
+import { Check, X, Users, FileText, Activity, Clock, Eye, MessageSquare } from 'lucide-react'
 
 interface User {
   id: number
@@ -26,13 +27,36 @@ interface DeleteRequest {
   created_at: string
 }
 
+interface PublicationForModeration {
+  id: number
+  title: string
+  author: string
+  year: number
+  department: string
+  status: string
+  status_display: string
+  moderation_status: string
+  moderation_status_display: string
+  created_at: string
+  updated_at: string
+  owner: number
+  owner_username: string
+  moderated_by?: number | null
+  moderated_at?: string | null
+  moderation_comment?: string | null
+}
+
 const AdminPanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'logs'>('users')
-  const [users, setUsers] = useState<User[]>([])
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'logs' | 'moderation'>('moderation')
+  const [users, setUsers] = useState<User[]>([]);
   const [deleteRequests, setDeleteRequests] = useState<DeleteRequest[]>([])
   const [logs, setLogs] = useState<any[]>([])
+  const [publicationsForModeration, setPublicationsForModeration] = useState<PublicationForModeration[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<number | null>(null)
+  const [selectedPub, setSelectedPub] = useState<PublicationForModeration | null>(null)
+  const [moderationComment, setModerationComment] = useState('')
+  const toast = useToast()
 
   useEffect(() => {
     loadData()
@@ -50,9 +74,17 @@ const AdminPanel: React.FC = () => {
       } else if (activeTab === 'logs') {
         const response = await api.get('/logs/')
         setLogs(response.data.results || response.data)
+      } else if (activeTab === 'moderation') {
+        const response = await api.get('/publications/moderation_queue/')
+        setPublicationsForModeration(response.data.results || response.data)
       }
     } catch (error) {
       console.error('Error loading data:', error)
+      toast.addToast({
+        type: 'error',
+        title: 'Ошибка загрузки',
+        message: 'Не удалось загрузить данные'
+      })
     } finally {
       setLoading(false)
     }
@@ -86,21 +118,67 @@ const AdminPanel: React.FC = () => {
     setUpdating(id)
     try {
       await api.patch(`/delete-requests/${id}/`, { status })
+      toast.addToast({
+        type: 'success',
+        title: 'Запрос обработан',
+        message: `Запрос на удаление ${status === 'approved' ? 'одобрен' : 'отклонён'}`
+      })
       await loadData()
     } catch (error) {
       console.error('Error reviewing request:', error)
+      toast.addToast({
+        type: 'error',
+        title: 'Ошибка',
+        message: 'Не удалось обработать запрос'
+      })
+    } finally {
+      setUpdating(null)
+    }
+  }
+
+  const moderatePublication = async (id: number, status: 'approved' | 'rejected') => {
+    setUpdating(id)
+    try {
+      await api.patch(`/publications/${id}/moderate/`, {
+        moderation_status: status,
+        moderation_comment: moderationComment || null
+      })
+      toast.addToast({
+        type: 'success',
+        title: 'Модерация завершена',
+        message: `Публикация ${status === 'approved' ? 'одобрена' : 'отклонена'}${moderationComment ? ' с комментарием' : ''}`
+      })
+      setModerationComment('')
+      setSelectedPub(null)
+      await loadData()
+    } catch (error) {
+      console.error('Error moderating publication:', error)
+      toast.addToast({
+        type: 'error',
+        title: 'Ошибка модерации',
+        message: 'Не удалось выполнить модерацию'
+      })
     } finally {
       setUpdating(null)
     }
   }
 
   const pendingCount = deleteRequests.filter(r => r.status === 'pending').length
+  const pendingModerationCount = publicationsForModeration.filter(p => p.moderation_status === 'pending_moderation').length
 
   return (
     <div className="admin-panel">
       <h1>Админ-панель</h1>
 
       <div className="tabs">
+        <button 
+          className={`tab ${activeTab === 'moderation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('moderation')}
+        >
+          <Clock size={18} />
+          Модерация публикаций
+          {pendingModerationCount > 0 && <span className="badge">{pendingModerationCount}</span>}
+        </button>
         <button 
           className={`tab ${activeTab === 'users' ? 'active' : ''}`}
           onClick={() => setActiveTab('users')}
@@ -124,6 +202,109 @@ const AdminPanel: React.FC = () => {
           Журнал активности
         </button>
       </div>
+
+      {activeTab === 'moderation' && (
+        <div className="tab-content">
+          <h2>Очередь модерации</h2>
+          {loading ? (
+            <div className="loading">Загрузка...</div>
+          ) : selectedPub ? (
+            // Детальный просмотр публикации для модерации
+            <div className="moderation-detail">
+              <div className="moderation-header">
+                <button className="btn-back" onClick={() => { setSelectedPub(null); setModerationComment('') }}>
+                  ← Назад к списку
+                </button>
+                <span className={`status-badge ${selectedPub.moderation_status}`}>
+                  {selectedPub.moderation_status_display || selectedPub.moderation_status}
+                </span>
+              </div>
+              
+              <div className="pub-detail-card">
+                <h3>{selectedPub.title}</h3>
+                <p className="author"><strong>Автор:</strong> {selectedPub.author}</p>
+                <div className="pub-meta">
+                  <span><strong>Год:</strong> {selectedPub.year}</span>
+                  <span><strong>Кафедра:</strong> {selectedPub.department}</span>
+                  <span><strong>Владелец:</strong> {selectedPub.owner_username}</span>
+                </div>
+                <p className="date-info">
+                  <span>Создано: {new Date(selectedPub.created_at).toLocaleString()}</span>
+                  {selectedPub.updated_at !== selectedPub.created_at && (
+                    <span> • Обновлено: {new Date(selectedPub.updated_at).toLocaleString()}</span>
+                  )}
+                </p>
+              </div>
+              
+              <div className="moderation-form">
+                <h4>Решение модератора</h4>
+                <div className="form-group full-width">
+                  <label>Комментарий (необязательно)</label>
+                  <textarea
+                    value={moderationComment}
+                    onChange={(e) => setModerationComment(e.target.value)}
+                    rows={4}
+                    placeholder="Укажите причину отклонения или дополнительные комментарии..."
+                  />
+                </div>
+                
+                <div className="moderation-actions">
+                  <button 
+                    className="btn-approve"
+                    onClick={() => moderatePublication(selectedPub.id, 'approved')}
+                    disabled={updating === selectedPub.id}
+                  >
+                    <Check size={18} />
+                    Одобрить публикацию
+                  </button>
+                  <button 
+                    className="btn-reject"
+                    onClick={() => moderatePublication(selectedPub.id, 'rejected')}
+                    disabled={updating === selectedPub.id}
+                  >
+                    <X size={18} />
+                    Отклонить публикацию
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="moderation-list">
+              {publicationsForModeration.length === 0 ? (
+                <p className="empty-message">Нет публикаций на модерации</p>
+              ) : (
+                <div className="cards-grid">
+                  {publicationsForModeration.map(pub => (
+                    <div key={pub.id} className={`pub-card moderation-card ${pub.moderation_status}`}>
+                      <div className="pub-header">
+                        <span className={`status-badge ${pub.moderation_status}`}>
+                          {pub.moderation_status_display || pub.moderation_status}
+                        </span>
+                        <Clock size={16} className="clock-icon" />
+                      </div>
+                      <h3>{pub.title}</h3>
+                      <p className="author">{pub.author}</p>
+                      <div className="pub-meta">
+                        <span>{pub.year}</span>
+                        <span>{pub.department}</span>
+                        <span>{pub.owner_username}</span>
+                      </div>
+                      <p className="date">Создано: {new Date(pub.created_at).toLocaleDateString()}</p>
+                      <button 
+                        className="btn-view"
+                        onClick={() => setSelectedPub(pub)}
+                      >
+                        <Eye size={16} />
+                        Рассмотреть
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === 'users' && (
         <div className="tab-content">
