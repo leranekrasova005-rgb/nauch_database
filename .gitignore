@@ -2,4 +2,16 @@
 # Logs
 *.log
 nohup.out
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtuaenv
+venv/
+env/
+
+# Environment
+.env
 ```
