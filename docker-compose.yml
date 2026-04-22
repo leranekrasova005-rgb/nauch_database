@@ -60,7 +60,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://172.20.10.4:8000
+      - VITE_API_URL=${VITE_API_URL:-http://172.20.10.4:8000}
+      - VITE_API_PROXY_TARGET=${VITE_API_PROXY_TARGET:-http://backend:8000}
     tty: true
     stdin_open: true
 
